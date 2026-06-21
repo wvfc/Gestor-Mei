@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,6 +30,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.gestormei.ui.components.AppCard
 import com.gestormei.ui.components.EmptyState
+import com.gestormei.ui.components.GraficoBarrasMensal
+import com.gestormei.ui.components.GraficoGaugeLimite
 import com.gestormei.ui.components.InfoRow
 import com.gestormei.ui.components.SectionTitle
 import com.gestormei.ui.theme.Amarelo
@@ -90,6 +91,14 @@ fun HomeScreen(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             StatCard("Compras do mês", Moeda.formatar(state.comprasMes), Modifier.weight(1f))
             StatCard("Compras do ano", Moeda.formatar(state.comprasAno), Modifier.weight(1f))
+        }
+
+        SectionTitle("Receitas x Despesas (ano atual)")
+        AppCard {
+            GraficoBarrasMensal(
+                receitasPorMes = state.serieReceitas,
+                despesasPorMes = state.serieDespesas
+            )
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -157,17 +166,12 @@ private fun LimiteCard(state: HomeUiState) {
     val percentual = (state.percentualUsado).coerceIn(0.0, 1.0).toFloat()
     AppCard {
         SectionTitle("Limite anual do MEI")
+        GraficoGaugeLimite(percentual = percentual, cor = cor)
+        Spacer(Modifier.height(8.dp))
         InfoRow("Limite anual", Moeda.formatar(state.limiteAnual))
         InfoRow("Faturado no ano", Moeda.formatar(state.faturamentoAno))
         InfoRow("Valor restante", Moeda.formatar(state.valorRestante))
         InfoRow("Percentual usado", "${(state.percentualUsado * 100).toInt()}%")
-        Spacer(Modifier.height(8.dp))
-        LinearProgressIndicator(
-            progress = { percentual },
-            modifier = Modifier.fillMaxWidth().height(10.dp),
-            color = cor,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant
-        )
     }
 }
 

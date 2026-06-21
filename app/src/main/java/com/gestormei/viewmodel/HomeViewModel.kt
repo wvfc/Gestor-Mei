@@ -34,7 +34,9 @@ data class HomeUiState(
     val projecaoDezembro: Double = 0.0,
     val proximasReunioes: List<Compromisso> = emptyList(),
     val projetosEmAndamento: Int = 0,
-    val nivelAlerta: NivelAlerta = NivelAlerta.NENHUM
+    val nivelAlerta: NivelAlerta = NivelAlerta.NENHUM,
+    val serieReceitas: List<Double> = List(12) { 0.0 },
+    val serieDespesas: List<Double> = List(12) { 0.0 }
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -100,6 +102,11 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
 
         val emAndamento = projetos.count { it.status == "Em andamento" }
 
+        val serieRec = DoubleArray(12)
+        recAno.forEach { r -> Datas.parse(r.data)?.let { serieRec[it.monthValue - 1] += r.valor } }
+        val serieDesp = DoubleArray(12)
+        despAno.forEach { d -> Datas.parse(d.data)?.let { serieDesp[it.monthValue - 1] += d.valor } }
+
         val nivel = when {
             percentual >= 0.95 -> NivelAlerta.CRITICO
             percentual >= 0.85 -> NivelAlerta.ALERTA
@@ -121,7 +128,9 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             projecaoDezembro = projecao,
             proximasReunioes = proximas,
             projetosEmAndamento = emAndamento,
-            nivelAlerta = nivel
+            nivelAlerta = nivel,
+            serieReceitas = serieRec.toList(),
+            serieDespesas = serieDesp.toList()
         )
     }
 }

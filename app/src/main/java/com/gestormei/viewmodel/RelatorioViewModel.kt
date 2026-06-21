@@ -12,6 +12,7 @@ import com.gestormei.data.model.Receita
 import com.gestormei.util.Datas
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -35,6 +36,18 @@ data class RelatorioUiState(
 class RelatorioViewModel(app: Application) : AndroidViewModel(app) {
 
     private val container = (app as GestorMeiApplication).container
+
+    private val empresaId: StateFlow<Long?> = container.empresaAtivaId.stateIn(
+        viewModelScope, SharingStarted.WhileSubscribed(5_000), null
+    )
+
+    val receitas: StateFlow<List<Receita>> = empresaId.flatMapLatest { id ->
+        if (id == null) flowOf(emptyList()) else container.financeiroRepository.observarReceitas(id)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val despesas: StateFlow<List<Despesa>> = empresaId.flatMapLatest { id ->
+        if (id == null) flowOf(emptyList()) else container.financeiroRepository.observarDespesas(id)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val uiState = container.empresaAtivaId.flatMapLatest { id ->
         if (id == null) {
