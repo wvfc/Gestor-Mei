@@ -4,9 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -14,9 +17,11 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,6 +31,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,11 +55,55 @@ import com.gestormei.ui.components.FormDialog
 import com.gestormei.ui.components.FormTextField
 import com.gestormei.ui.components.InfoRow
 import com.gestormei.util.Acoes
+import com.gestormei.util.BiometricAuth
 import com.gestormei.viewmodel.AcessoViewModel
 
 @Composable
 fun AcessosScreen(viewModel: AcessoViewModel = viewModel()) {
     var aba by remember { mutableIntStateOf(0) }
+    val context = LocalContext.current
+    val activity = context as? androidx.fragment.app.FragmentActivity
+    val precisaBloqueio = remember { activity != null && BiometricAuth.disponivel(context) }
+    var desbloqueado by remember { mutableStateOf(!precisaBloqueio) }
+    var erro by remember { mutableStateOf<String?>(null) }
+
+    fun desbloquear() {
+        activity?.let {
+            BiometricAuth.autenticar(
+                it,
+                onSucesso = { desbloqueado = true; erro = null },
+                onErro = { msg -> erro = msg }
+            )
+        }
+    }
+
+    LaunchedEffect(precisaBloqueio) {
+        if (precisaBloqueio) desbloquear()
+    }
+
+    if (!desbloqueado) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Default.Lock,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(12.dp))
+            Text("Cofre protegido", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            erro?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
+            Spacer(Modifier.height(12.dp))
+            Button(onClick = { desbloquear() }) { Text("Desbloquear") }
+        }
+        return
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = aba) {

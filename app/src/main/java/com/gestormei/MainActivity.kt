@@ -1,8 +1,12 @@
 package com.gestormei
 
+import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -58,7 +62,7 @@ import com.gestormei.ui.screens.RelatoriosScreen
 import com.gestormei.ui.theme.GestorMeiTheme
 import com.gestormei.viewmodel.EmpresaViewModel
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -87,6 +91,18 @@ private const val ROTA_CLIENTES = "clientes"
 @Composable
 private fun GestorMeiApp() {
     val navController = rememberNavController()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val permissaoNotif = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { }
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val concedida = ContextCompat.checkSelfPermission(
+                context, android.Manifest.permission.POST_NOTIFICATIONS
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            if (!concedida) permissaoNotif.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
     val empresaVM: EmpresaViewModel = viewModel()
     val empresas by empresaVM.empresas.collectAsStateWithLifecycle()
     val selecionadaId by empresaVM.empresaSelecionadaId.collectAsStateWithLifecycle()
