@@ -14,6 +14,9 @@ interface EmailDao {
     @Query("SELECT * FROM emails WHERE empresaId = :empresaId ORDER BY servico, id DESC")
     fun observarPorEmpresa(empresaId: Long): Flow<List<EmailRegistro>>
 
+    @Query("SELECT * FROM emails")
+    suspend fun todas(): List<EmailRegistro>
+
     @Insert
     suspend fun inserir(email: EmailRegistro): Long
 

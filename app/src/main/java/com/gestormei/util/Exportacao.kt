@@ -2,10 +2,13 @@ package com.gestormei.util
 
 import android.content.Context
 import android.content.Intent
+import android.graphics.Paint
+import android.graphics.pdf.PdfDocument
 import androidx.core.content.FileProvider
 import com.gestormei.data.model.Despesa
 import com.gestormei.data.model.Receita
 import java.io.File
+import java.io.FileOutputStream
 
 /** Exportação de dados em CSV e compartilhamento via apps do sistema. */
 object Exportacao {
@@ -30,6 +33,50 @@ object Exportacao {
             ).joinToString(";") { escapar(it) }
         }
         compartilhar(context, "despesas.csv", "$cabecalho\n$linhas")
+    }
+
+    fun compartilharRelatorioPdf(
+        context: Context,
+        titulo: String,
+        linhas: List<Pair<String, String>>
+    ) {
+        val documento = PdfDocument()
+        val pagina = documento.startPage(PdfDocument.PageInfo.Builder(595, 842, 1).create())
+        val canvas = pagina.canvas
+        val tituloPaint = Paint().apply { textSize = 20f; isFakeBoldText = true }
+        val labelPaint = Paint().apply { textSize = 12f; color = 0xFF6B7280.toInt() }
+        val valorPaint = Paint().apply { textSize = 13f; isFakeBoldText = true }
+
+        var y = 60f
+        canvas.drawText(titulo, 40f, y, tituloPaint)
+        y += 18f
+        canvas.drawText("Gestor MEI", 40f, y, labelPaint)
+        y += 30f
+        linhas.forEach { (rotulo, valor) ->
+            if (rotulo.isBlank()) {
+                y += 12f
+            } else {
+                canvas.drawText(rotulo, 40f, y, labelPaint)
+                canvas.drawText(valor, 300f, y, valorPaint)
+                y += 22f
+            }
+        }
+        documento.finishPage(pagina)
+
+        val dir = File(context.cacheDir, "exportados").apply { mkdirs() }
+        val arquivo = File(dir, "relatorio.pdf")
+        FileOutputStream(arquivo).use { documento.writeTo(it) }
+        documento.close()
+
+        val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", arquivo)
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        context.startActivity(
+            Intent.createChooser(intent, "Compartilhar PDF").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
     }
 
     private fun compartilhar(context: Context, nomeArquivo: String, conteudo: String) {

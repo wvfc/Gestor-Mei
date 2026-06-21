@@ -20,6 +20,12 @@ interface EmpresaDao {
     @Query("SELECT COUNT(*) FROM empresas")
     suspend fun contar(): Int
 
+    @Query("SELECT * FROM empresas")
+    suspend fun todas(): List<Empresa>
+
+    @androidx.room.Insert
+    suspend fun inserirVarios(empresas: List<Empresa>)
+
     @Insert
     suspend fun inserir(empresa: Empresa): Long
 

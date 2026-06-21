@@ -22,6 +22,7 @@ class AppContainer(context: Context) {
 
     val selectionManager = SelectionManager(context)
     val configManager = ConfigManager(context)
+    val backupManager = BackupManager(db)
 
     val empresaRepository = EmpresaRepository(db.empresaDao())
     val financeiroRepository = FinanceiroRepository(db.receitaDao(), db.despesaDao())

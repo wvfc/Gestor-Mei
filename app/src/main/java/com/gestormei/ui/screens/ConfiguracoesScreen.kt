@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -62,6 +63,14 @@ fun ConfiguracoesScreen(
     val importarNubank = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri -> uri?.let { viewModel.importarExtratoNubank(it) } }
+
+    val exportarBackup = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> uri?.let { viewModel.exportarBackup(it) } }
+
+    val restaurarBackup = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> uri?.let { viewModel.restaurarBackup(it) } }
 
     Column(
         modifier = Modifier
@@ -176,6 +185,33 @@ fun ConfiguracoesScreen(
             ) {
                 Icon(Icons.Default.Download, contentDescription = null)
                 Text("  Selecionar extrato (CSV)")
+            }
+        }
+
+        // 4) Backup e restauração
+        AppCard {
+            SectionTitle("Backup e restauração")
+            Text(
+                "Exporte todos os seus dados em um arquivo .json e restaure quando " +
+                    "precisar. As senhas do cofre só são restauradas no mesmo aparelho.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+            Button(
+                onClick = { exportarBackup.launch("gestor-mei-backup.json") },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Upload, contentDescription = null)
+                Text("  Exportar backup (JSON)")
+            }
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = { restaurarBackup.launch(arrayOf("application/json", "text/*", "*/*")) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Download, contentDescription = null)
+                Text("  Restaurar backup")
             }
         }
 

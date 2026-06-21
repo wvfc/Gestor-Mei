@@ -14,6 +14,9 @@ interface ProjetoDao {
     @Query("SELECT * FROM projetos WHERE empresaId = :empresaId ORDER BY id DESC")
     fun observarPorEmpresa(empresaId: Long): Flow<List<Projeto>>
 
+    @Query("SELECT * FROM projetos")
+    suspend fun todas(): List<Projeto>
+
     @Insert
     suspend fun inserir(projeto: Projeto): Long
 

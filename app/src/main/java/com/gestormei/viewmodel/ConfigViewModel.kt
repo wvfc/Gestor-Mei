@@ -63,6 +63,40 @@ class ConfigViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    fun exportarBackup(uri: Uri) {
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val json = container.backupManager.exportarJson()
+                    getApplication<Application>().contentResolver.openOutputStream(uri)?.use {
+                        it.write(json.toByteArray(Charsets.UTF_8))
+                    } ?: error("Não foi possível gravar o arquivo.")
+                }
+            }.onSuccess {
+                _mensagem.value = "Backup exportado com sucesso."
+            }.onFailure {
+                _mensagem.value = "Falha ao exportar backup: ${it.message}"
+            }
+        }
+    }
+
+    fun restaurarBackup(uri: Uri) {
+        viewModelScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    val json = getApplication<Application>().contentResolver
+                        .openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+                        ?: error("Não foi possível ler o arquivo.")
+                    container.backupManager.importarJson(json)
+                }
+            }.onSuccess { total ->
+                _mensagem.value = "Backup restaurado: $total registros."
+            }.onFailure {
+                _mensagem.value = "Falha ao restaurar backup: ${it.message}"
+            }
+        }
+    }
+
     fun importarExtratoNubank(uri: Uri) {
         viewModelScope.launch {
             runCatching {

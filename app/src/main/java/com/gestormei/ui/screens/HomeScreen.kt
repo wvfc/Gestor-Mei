@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -114,6 +115,29 @@ fun HomeScreen(
             valor = Moeda.formatar(state.impostosAno),
             modifier = Modifier.fillMaxWidth()
         )
+
+        AppCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "DAS deste mês",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = if (state.dasPagoMes) "Pago" else "Pendente (vence dia 20)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (state.dasPagoMes) Verde else Laranja
+                    )
+                }
+                Icon(
+                    imageVector = if (state.dasPagoMes) Icons.Default.CheckCircle else Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = if (state.dasPagoMes) Verde else Laranja
+                )
+            }
+        }
 
         StatCard(
             titulo = "Projetos em andamento",

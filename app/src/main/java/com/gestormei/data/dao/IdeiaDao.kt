@@ -14,6 +14,9 @@ interface IdeiaDao {
     @Query("SELECT * FROM ideias WHERE empresaId = :empresaId ORDER BY id DESC")
     fun observarPorEmpresa(empresaId: Long): Flow<List<Ideia>>
 
+    @Query("SELECT * FROM ideias")
+    suspend fun todas(): List<Ideia>
+
     @Insert
     suspend fun inserir(ideia: Ideia): Long
 

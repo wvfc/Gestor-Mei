@@ -14,6 +14,9 @@ interface SenhaDao {
     @Query("SELECT * FROM senhas WHERE empresaId = :empresaId ORDER BY nomeServico, id DESC")
     fun observarPorEmpresa(empresaId: Long): Flow<List<Senha>>
 
+    @Query("SELECT * FROM senhas")
+    suspend fun todas(): List<Senha>
+
     @Insert
     suspend fun inserir(senha: Senha): Long
 

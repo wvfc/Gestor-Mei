@@ -23,6 +23,9 @@ interface DespesaDao {
     @Delete
     suspend fun excluir(despesa: Despesa)
 
+    @Query("SELECT * FROM despesas")
+    suspend fun todas(): List<Despesa>
+
     @Query("SELECT referencia FROM despesas WHERE empresaId = :empresaId AND referencia <> ''")
     suspend fun referencias(empresaId: Long): List<String>
 

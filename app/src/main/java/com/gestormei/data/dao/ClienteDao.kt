@@ -14,6 +14,9 @@ interface ClienteDao {
     @Query("SELECT * FROM clientes WHERE empresaId = :empresaId ORDER BY nome")
     fun observarPorEmpresa(empresaId: Long): Flow<List<Cliente>>
 
+    @Query("SELECT * FROM clientes")
+    suspend fun todas(): List<Cliente>
+
     @Insert
     suspend fun inserir(cliente: Cliente): Long
 

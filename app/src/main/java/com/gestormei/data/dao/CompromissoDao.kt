@@ -14,6 +14,9 @@ interface CompromissoDao {
     @Query("SELECT * FROM compromissos WHERE empresaId = :empresaId ORDER BY data, hora")
     fun observarPorEmpresa(empresaId: Long): Flow<List<Compromisso>>
 
+    @Query("SELECT * FROM compromissos")
+    suspend fun todas(): List<Compromisso>
+
     @Insert
     suspend fun inserir(compromisso: Compromisso): Long
 
