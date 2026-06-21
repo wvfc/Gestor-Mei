@@ -12,5 +12,7 @@ data class Despesa(
     val descricao: String = "",
     val categoria: String = "",
     val valor: Double = 0.0,
-    val numeroNota: String = ""
+    val numeroNota: String = "",
+    val anexoUri: String = "",
+    val origem: String = ""
 )

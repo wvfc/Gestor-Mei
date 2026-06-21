@@ -1,5 +1,8 @@
 package com.gestormei.ui.screens
 
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,16 +12,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -27,13 +33,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.gestormei.GestorMeiApplication
+import com.gestormei.data.ai.OpenAiService
 import com.gestormei.data.model.Despesa
 import com.gestormei.data.model.Receita
 import com.gestormei.ui.components.AppCard
@@ -48,6 +58,7 @@ import com.gestormei.util.Datas
 import com.gestormei.util.Moeda
 import com.gestormei.util.Opcoes
 import com.gestormei.viewmodel.FinanceiroViewModel
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 @Composable
@@ -294,6 +305,8 @@ private fun DespesasTab(viewModel: FinanceiroViewModel) {
                             if (d.descricao.isNotBlank()) InfoRow("Descrição", d.descricao)
                             if (d.categoria.isNotBlank()) InfoRow("Categoria", d.categoria)
                             if (d.numeroNota.isNotBlank()) InfoRow("Nota fiscal", d.numeroNota)
+                            if (d.anexoUri.isNotBlank()) InfoRow("Anexo", "PDF")
+                            if (d.origem.isNotBlank()) InfoRow("Origem", d.origem)
                             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                                 IconButton(onClick = { editando = d; mostrarForm = true }) {
                                     Icon(Icons.Default.Edit, contentDescription = "Editar")
@@ -335,16 +348,62 @@ private fun DespesaForm(
     onSalvar: (Despesa) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val config = remember {
+        (context.applicationContext as GestorMeiApplication).container.configManager
+    }
+
     var data by remember { mutableStateOf(inicial?.data ?: Datas.hoje()) }
     var fornecedor by remember { mutableStateOf(inicial?.fornecedor ?: "") }
     var descricao by remember { mutableStateOf(inicial?.descricao ?: "") }
     var categoria by remember { mutableStateOf(inicial?.categoria ?: Opcoes.categoriasDespesa.first()) }
     var valor by remember { mutableStateOf(inicial?.valor?.takeIf { it > 0 }?.toString() ?: "") }
     var nota by remember { mutableStateOf(inicial?.numeroNota ?: "") }
+    var anexoUri by remember { mutableStateOf(inicial?.anexoUri ?: "") }
+    var analisando by remember { mutableStateOf(false) }
+    var mensagemIa by remember { mutableStateOf<String?>(null) }
+
+    val seletorPdf = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            anexoUri = uri.toString()
+            if (config.iaAnexosAtiva && config.temChave) {
+                analisando = true
+                mensagemIa = "Lendo o PDF com a IA..."
+                scope.launch {
+                    val resultado = OpenAiService.extrairDeDespesaPdf(
+                        context, uri, config.openAiKey, config.openAiModel
+                    )
+                    analisando = false
+                    resultado.onSuccess { extra ->
+                        extra.valor?.let { if (it > 0) valor = it.toString() }
+                        extra.fornecedor?.let { if (it.isNotBlank()) fornecedor = it }
+                        extra.data?.let { d -> Datas.normalizarParaIso(d)?.let { data = it } }
+                        extra.descricao?.let { if (it.isNotBlank() && descricao.isBlank()) descricao = it }
+                        extra.categoria?.let { c ->
+                            if (Opcoes.categoriasDespesa.contains(c)) categoria = c
+                        }
+                        mensagemIa = "Dados preenchidos pela IA. Confira antes de salvar."
+                    }.onFailure {
+                        mensagemIa = "Não foi possível ler com IA: ${it.message}"
+                    }
+                }
+            } else {
+                mensagemIa = "PDF anexado. Configure a chave da OpenAI para leitura automática."
+            }
+        }
+    }
 
     FormDialog(
         titulo = if (inicial == null) "Nova despesa" else "Editar despesa",
-        salvarHabilitado = valor.isNotBlank(),
+        salvarHabilitado = valor.isNotBlank() && !analisando,
         onSalvar = {
             onSalvar(
                 (inicial ?: Despesa(empresaId = 0)).copy(
@@ -353,12 +412,32 @@ private fun DespesaForm(
                     descricao = descricao.trim(),
                     categoria = categoria,
                     valor = Moeda.parse(valor),
-                    numeroNota = nota.trim()
+                    numeroNota = nota.trim(),
+                    anexoUri = anexoUri
                 )
             )
         },
         onDismiss = onDismiss
     ) {
+        OutlinedButton(
+            onClick = { seletorPdf.launch(arrayOf("application/pdf")) },
+            enabled = !analisando,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (analisando) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text("  Lendo com IA...")
+            } else {
+                Text(if (anexoUri.isBlank()) "Anexar PDF (nota/recibo)" else "PDF anexado — trocar")
+            }
+        }
+        mensagemIa?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
         DatePickerField("Data", data, { data = it })
         FormTextField("Fornecedor", fornecedor, { fornecedor = it })
         FormTextField("Descrição", descricao, { descricao = it }, singleLine = false, minLines = 2)

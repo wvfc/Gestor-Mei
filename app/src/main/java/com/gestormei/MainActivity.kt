@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -43,6 +44,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.gestormei.ui.screens.AcessosScreen
 import com.gestormei.ui.screens.AgendaScreen
+import com.gestormei.ui.screens.ClientesScreen
+import com.gestormei.ui.screens.ConfiguracoesScreen
 import com.gestormei.ui.screens.EmpresasScreen
 import com.gestormei.ui.screens.FinanceiroScreen
 import com.gestormei.ui.screens.HomeScreen
@@ -74,6 +77,8 @@ private enum class Destino(val rota: String, val titulo: String, val icone: Imag
 }
 
 private const val ROTA_RELATORIOS = "relatorios"
+private const val ROTA_CONFIGURACOES = "configuracoes"
+private const val ROTA_CLIENTES = "clientes"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -124,6 +129,17 @@ private fun GestorMeiApp() {
                         )
                     }
                 },
+                actions = {
+                    androidx.compose.material3.IconButton(
+                        onClick = { navController.navigate(ROTA_CONFIGURACOES) }
+                    ) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Configurações",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary
@@ -171,6 +187,13 @@ private fun GestorMeiApp() {
             composable(ROTA_RELATORIOS) {
                 RelatoriosScreen(onVoltar = { navController.popBackStack() })
             }
+            composable(ROTA_CONFIGURACOES) {
+                ConfiguracoesScreen(
+                    onAbrirClientes = { navController.navigate(ROTA_CLIENTES) },
+                    onVoltar = { navController.popBackStack() }
+                )
+            }
+            composable(ROTA_CLIENTES) { ClientesScreen() }
         }
     }
 }

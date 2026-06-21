@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.gestormei.data.dao.ClienteDao
 import com.gestormei.data.dao.CompromissoDao
 import com.gestormei.data.dao.DespesaDao
 import com.gestormei.data.dao.EmailDao
@@ -12,6 +13,7 @@ import com.gestormei.data.dao.IdeiaDao
 import com.gestormei.data.dao.ProjetoDao
 import com.gestormei.data.dao.ReceitaDao
 import com.gestormei.data.dao.SenhaDao
+import com.gestormei.data.model.Cliente
 import com.gestormei.data.model.Compromisso
 import com.gestormei.data.model.Despesa
 import com.gestormei.data.model.EmailRegistro
@@ -30,9 +32,10 @@ import com.gestormei.data.model.Senha
         Senha::class,
         Compromisso::class,
         Projeto::class,
-        Ideia::class
+        Ideia::class,
+        Cliente::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -45,6 +48,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun compromissoDao(): CompromissoDao
     abstract fun projetoDao(): ProjetoDao
     abstract fun ideiaDao(): IdeiaDao
+    abstract fun clienteDao(): ClienteDao
 
     companion object {
         @Volatile

@@ -38,6 +38,20 @@ object Datas {
     fun paraBR(texto: String): String =
         parse(texto)?.format(br) ?: texto
 
+    /** Tenta normalizar datas em vários formatos comuns para ISO (yyyy-MM-dd). */
+    fun normalizarParaIso(texto: String): String? {
+        val limpo = texto.trim()
+        if (limpo.isBlank()) return null
+        parse(limpo)?.let { return it.format(iso) }
+        val formatos = listOf("dd/MM/yyyy", "dd-MM-yyyy", "yyyy/MM/dd", "dd/MM/yy")
+        for (f in formatos) {
+            runCatching {
+                LocalDate.parse(limpo, DateTimeFormatter.ofPattern(f))
+            }.getOrNull()?.let { return it.format(iso) }
+        }
+        return null
+    }
+
     fun deMillisParaIso(millis: Long): String =
         java.time.Instant.ofEpochMilli(millis)
             .atZone(java.time.ZoneOffset.UTC)
