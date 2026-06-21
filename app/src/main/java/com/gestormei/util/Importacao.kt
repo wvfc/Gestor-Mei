@@ -5,6 +5,8 @@ import android.net.Uri
 import com.gestormei.data.model.Cliente
 import com.gestormei.data.model.Despesa
 import com.gestormei.data.model.Receita
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
 import kotlin.math.abs
 
 /**
@@ -16,12 +18,31 @@ object Importacao {
 
     data class Resultado<T>(val itens: List<T>, val ignorados: Int)
 
-    fun lerLinhas(context: Context, uri: Uri): List<String> =
-        context.contentResolver.openInputStream(uri)
-            ?.bufferedReader()
-            ?.use { leitor -> leitor.readLines() }
-            ?.filter { it.isNotBlank() }
-            ?: emptyList()
+    fun lerLinhas(context: Context, uri: Uri): List<String> {
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: return emptyList()
+        return linhasDeBytes(bytes)
+    }
+
+    fun linhasDeBytes(bytes: ByteArray): List<String> =
+        decodificar(bytes).split(Regex("\\r?\\n")).filter { it.isNotBlank() }
+
+    /** Decodifica tentando UTF-8; se houver bytes inválidos, usa ISO-8859-1 (Latin-1). */
+    fun decodificar(bytes: ByteArray): String =
+        runCatching {
+            val decoder = Charsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+            decoder.decode(ByteBuffer.wrap(bytes)).toString()
+        }.getOrElse { String(bytes, Charsets.ISO_8859_1) }
+
+    /** Heurística simples: o conteúdo parece texto (CSV) e não um binário. */
+    fun pareceTexto(bytes: ByteArray): Boolean {
+        if (bytes.isEmpty()) return false
+        val amostra = bytes.take(2000)
+        val nulos = amostra.count { it.toInt() == 0 }
+        return nulos == 0
+    }
 
     fun clientesDeCsv(linhas: List<String>, empresaId: Long): Resultado<Cliente> {
         if (linhas.isEmpty()) return Resultado(emptyList(), 0)
@@ -165,7 +186,8 @@ object Importacao {
                         valor = valorBruto,
                         formaPagamento = formaReceita(descricao),
                         origem = "Nubank",
-                        referencia = referencia
+                        referencia = referencia,
+                        contaNoLimite = ehFaturamento(descricao)
                     )
                 )
             } else {
@@ -191,6 +213,20 @@ object Importacao {
         val partes = descricao.split(" - ")
         val nome = partes.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() } ?: partes.first().trim()
         return nome.take(60)
+    }
+
+    /**
+     * Define se uma entrada conta como faturamento (limite do MEI). Movimentações
+     * financeiras (resgates, rendimentos, reembolsos, estornos, transferências
+     * entre contas próprias) NÃO são receita de venda.
+     */
+    private fun ehFaturamento(descricao: String): Boolean {
+        val d = descricao.uppercase()
+        val naoNegocio = listOf(
+            "RESGATE", "RENDIMENTO", "REEMBOLSO", "ESTORNO", "APLICAÇÃO", "APLICACAO",
+            "RDB", "DEVOLUÇÃO", "DEVOLUCAO", "EMPRÉSTIMO", "EMPRESTIMO"
+        )
+        return naoNegocio.none { d.contains(it) }
     }
 
     private fun formaReceita(descricao: String): String = when {

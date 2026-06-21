@@ -39,6 +39,7 @@ import com.gestormei.ui.components.FormDialog
 import com.gestormei.ui.components.FormTextField
 import com.gestormei.ui.components.InfoRow
 import com.gestormei.ui.components.SearchField
+import com.gestormei.util.contemBusca
 import com.gestormei.viewmodel.ClienteViewModel
 
 @Composable
@@ -52,8 +53,8 @@ fun ClientesScreen(viewModel: ClienteViewModel = viewModel()) {
 
     val filtrados = remember(clientes, busca) {
         clientes.filter {
-            busca.isBlank() || it.nome.contains(busca, true) ||
-                it.email.contains(busca, true) || it.telefone.contains(busca, true)
+            busca.isBlank() || it.nome.contemBusca(busca) ||
+                it.email.contemBusca(busca) || it.telefone.contemBusca(busca)
         }
     }
 

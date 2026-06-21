@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Visibility
@@ -32,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -46,6 +48,7 @@ import com.gestormei.ui.components.EmptyState
 import com.gestormei.ui.components.FormDialog
 import com.gestormei.ui.components.FormTextField
 import com.gestormei.ui.components.InfoRow
+import com.gestormei.util.Acoes
 import com.gestormei.viewmodel.AcessoViewModel
 
 @Composable
@@ -110,6 +113,7 @@ private fun SenhasTab(viewModel: AcessoViewModel) {
 @Composable
 private fun SenhaCard(senha: Senha, onEditar: () -> Unit, onExcluir: () -> Unit) {
     var visivel by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     AppCard {
         Text(
             text = senha.nomeServico,
@@ -117,7 +121,14 @@ private fun SenhaCard(senha: Senha, onEditar: () -> Unit, onExcluir: () -> Unit)
             fontWeight = FontWeight.Bold
         )
         if (senha.link.isNotBlank()) InfoRow("Link", senha.link)
-        if (senha.login.isNotBlank()) InfoRow("Login", senha.login)
+        if (senha.login.isNotBlank()) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                InfoRowExpandivel("Login", senha.login)
+                IconButton(onClick = { Acoes.copiar(context, "Login", senha.login) }) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = "Copiar login")
+                }
+            }
+        }
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             InfoRowExpandivel("Senha", if (visivel) senha.senha else "••••••••")
             IconButton(onClick = { visivel = !visivel }) {
@@ -125,6 +136,9 @@ private fun SenhaCard(senha: Senha, onEditar: () -> Unit, onExcluir: () -> Unit)
                     imageVector = if (visivel) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                     contentDescription = if (visivel) "Ocultar" else "Mostrar"
                 )
+            }
+            IconButton(onClick = { Acoes.copiar(context, "Senha", senha.senha) }) {
+                Icon(Icons.Default.ContentCopy, contentDescription = "Copiar senha")
             }
         }
         if (senha.observacoes.isNotBlank()) InfoRow("Obs.", senha.observacoes)

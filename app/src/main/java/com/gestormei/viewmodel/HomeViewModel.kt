@@ -80,8 +80,10 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         val mes = hoje.monthValue
 
         val recAno = receitas.filter { Datas.parse(it.data)?.year == ano }
-        val faturamentoAno = recAno.sumOf { it.valor }
-        val faturamentoMes = recAno
+        // faturamento (limite do MEI) considera apenas receitas de venda
+        val recFat = recAno.filter { it.contaNoLimite }
+        val faturamentoAno = recFat.sumOf { it.valor }
+        val faturamentoMes = recFat
             .filter { Datas.parse(it.data)?.monthValue == mes }
             .sumOf { it.valor }
 

@@ -1,5 +1,6 @@
 package com.gestormei.util
 
+import java.text.Normalizer
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -7,21 +8,37 @@ import java.util.Locale
 
 private val localeBR = Locale("pt", "BR")
 
+/** Remove acentos para comparações/buscas. */
+fun String.semAcento(): String =
+    Normalizer.normalize(this, Normalizer.Form.NFD)
+        .replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "")
+
+/** Busca tolerante a acentos e maiúsculas/minúsculas. */
+fun String.contemBusca(query: String): Boolean =
+    this.semAcento().lowercase().contains(query.semAcento().lowercase())
+
 object Moeda {
     private val format: NumberFormat = NumberFormat.getCurrencyInstance(localeBR)
 
     fun formatar(valor: Double): String = format.format(valor)
 
-    /** Converte texto digitado ("1.234,56" ou "1234.56") em Double. */
+    /**
+     * Converte texto em Double aceitando padrão brasileiro ("1.234,56"),
+     * separador de milhar sem decimais ("1.000" = mil) e ponto decimal de
+     * máquina ("1234.56", "990.00"), inclusive valores negativos.
+     */
     fun parse(texto: String): Double {
         if (texto.isBlank()) return 0.0
         val limpo = texto.trim()
             .replace("R$", "")
             .replace(" ", "")
-        return if (limpo.contains(",")) {
-            limpo.replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0
-        } else {
-            limpo.toDoubleOrNull() ?: 0.0
+        return when {
+            limpo.contains(",") ->
+                limpo.replace(".", "").replace(",", ".").toDoubleOrNull() ?: 0.0
+            // só pontos como separador de milhar: 1.000 / 1.500.000
+            Regex("^-?\\d{1,3}(\\.\\d{3})+$").matches(limpo) ->
+                limpo.replace(".", "").toDoubleOrNull() ?: 0.0
+            else -> limpo.toDoubleOrNull() ?: 0.0
         }
     }
 }

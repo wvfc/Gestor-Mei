@@ -1,14 +1,31 @@
 package com.gestormei.data
 
 import android.content.Context
+import android.content.SharedPreferences
+import androidx.security.crypto.EncryptedSharedPreferences
+import androidx.security.crypto.MasterKey
 
 /**
- * Configurações do app guardadas localmente (SharedPreferences).
- * A estrutura está preparada para evoluir para armazenamento criptografado.
+ * Configurações do app guardadas localmente de forma criptografada
+ * (EncryptedSharedPreferences). Se a criptografia falhar no dispositivo,
+ * cai para SharedPreferences comum para não travar o app.
  */
 class ConfigManager(context: Context) {
 
-    private val prefs = context.getSharedPreferences("gestor_mei_config", Context.MODE_PRIVATE)
+    private val prefs: SharedPreferences = runCatching {
+        val masterKey = MasterKey.Builder(context)
+            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .build()
+        EncryptedSharedPreferences.create(
+            context,
+            "gestor_mei_config_enc",
+            masterKey,
+            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+        )
+    }.getOrElse {
+        context.getSharedPreferences("gestor_mei_config", Context.MODE_PRIVATE)
+    }
 
     var openAiKey: String
         get() = prefs.getString(KEY_OPENAI, "") ?: ""

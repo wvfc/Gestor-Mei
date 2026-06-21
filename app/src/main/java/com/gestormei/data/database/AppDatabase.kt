@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.gestormei.data.dao.ClienteDao
 import com.gestormei.data.dao.CompromissoDao
 import com.gestormei.data.dao.DespesaDao
@@ -35,7 +37,7 @@ import com.gestormei.data.model.Senha
         Ideia::class,
         Cliente::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -54,13 +56,25 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        /** Preserva os dados existentes ao adicionar a coluna contaNoLimite. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "ALTER TABLE receitas ADD COLUMN contaNoLimite INTEGER NOT NULL DEFAULT 1"
+                )
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "gestor_mei.db"
-                ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
+                )
+                    .addMigrations(MIGRATION_3_4)
+                    .fallbackToDestructiveMigration()
+                    .build().also { INSTANCE = it }
             }
         }
     }

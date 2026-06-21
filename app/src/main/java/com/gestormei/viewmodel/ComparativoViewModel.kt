@@ -52,7 +52,9 @@ class ComparativoViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun resumo(empresa: Empresa, receitas: List<Receita>, despesas: List<Despesa>): ComparativoEmpresa {
         val ano = LocalDate.now().year
-        val faturamento = receitas.filter { Datas.parse(it.data)?.year == ano }.sumOf { it.valor }
+        val faturamento = receitas
+            .filter { Datas.parse(it.data)?.year == ano && it.contaNoLimite }
+            .sumOf { it.valor }
         val despAno = despesas.filter { Datas.parse(it.data)?.year == ano }
         val despesa = despAno.sumOf { it.valor }
         val impostos = despAno.filter { it.categoria == "Impostos" }.sumOf { it.valor }

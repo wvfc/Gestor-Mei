@@ -61,6 +61,7 @@ import com.gestormei.ui.components.SearchField
 import com.gestormei.util.Datas
 import com.gestormei.util.Exportacao
 import com.gestormei.util.Moeda
+import com.gestormei.util.contemBusca
 import com.gestormei.util.Opcoes
 import com.gestormei.viewmodel.FinanceiroViewModel
 import kotlinx.coroutines.launch
@@ -156,8 +157,8 @@ private fun ReceitasTab(viewModel: FinanceiroViewModel) {
     val filtradas = remember(receitas, mes, ano, busca) {
         receitas.filter { combinaPeriodo(it.data, mes, ano) }
             .filter {
-                busca.isBlank() || it.cliente.contains(busca, true) ||
-                    it.descricao.contains(busca, true) || it.formaPagamento.contains(busca, true)
+                busca.isBlank() || it.cliente.contemBusca(busca) ||
+                    it.descricao.contemBusca(busca) || it.formaPagamento.contemBusca(busca)
             }
     }
     val total = filtradas.sumOf { it.valor }
@@ -204,6 +205,8 @@ private fun ReceitasTab(viewModel: FinanceiroViewModel) {
                             if (r.descricao.isNotBlank()) InfoRow("Descrição", r.descricao)
                             if (r.formaPagamento.isNotBlank()) InfoRow("Pagamento", r.formaPagamento)
                             if (r.numeroNota.isNotBlank()) InfoRow("Nota fiscal", r.numeroNota)
+                            if (r.origem.isNotBlank()) InfoRow("Origem", r.origem)
+                            if (!r.contaNoLimite) InfoRow("Faturamento", "Não conta no limite")
                             Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
                                 IconButton(onClick = { editando = r; mostrarForm = true }) {
                                     Icon(Icons.Default.Edit, contentDescription = "Editar")
@@ -257,6 +260,7 @@ private fun ReceitaForm(
     var valor by remember { mutableStateOf(inicial?.valor?.takeIf { it > 0 }?.toString() ?: "") }
     var forma by remember { mutableStateOf(inicial?.formaPagamento ?: Opcoes.formasPagamento.first()) }
     var nota by remember { mutableStateOf(inicial?.numeroNota ?: "") }
+    var contaLimite by remember { mutableStateOf(inicial?.contaNoLimite ?: true) }
     var analisando by remember { mutableStateOf(false) }
     var mensagemIa by remember { mutableStateOf<String?>(null) }
 
@@ -304,7 +308,8 @@ private fun ReceitaForm(
                     descricao = descricao.trim(),
                     valor = Moeda.parse(valor),
                     formaPagamento = forma,
-                    numeroNota = nota.trim()
+                    numeroNota = nota.trim(),
+                    contaNoLimite = contaLimite
                 )
             )
         },
@@ -335,6 +340,10 @@ private fun ReceitaForm(
         FormTextField("Valor (R$)", valor, { valor = it })
         DropdownField("Forma de pagamento", Opcoes.formasPagamento, forma, { forma = it })
         FormTextField("Número da nota (opcional)", nota, { nota = it })
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Conta no faturamento (limite MEI)", modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = contaLimite, onCheckedChange = { contaLimite = it })
+        }
     }
 }
 
@@ -352,8 +361,8 @@ private fun DespesasTab(viewModel: FinanceiroViewModel) {
     val filtradas = remember(despesas, mes, ano, busca) {
         despesas.filter { combinaPeriodo(it.data, mes, ano) }
             .filter {
-                busca.isBlank() || it.fornecedor.contains(busca, true) ||
-                    it.descricao.contains(busca, true) || it.categoria.contains(busca, true)
+                busca.isBlank() || it.fornecedor.contemBusca(busca) ||
+                    it.descricao.contemBusca(busca) || it.categoria.contemBusca(busca)
             }
     }
     val total = filtradas.sumOf { it.valor }

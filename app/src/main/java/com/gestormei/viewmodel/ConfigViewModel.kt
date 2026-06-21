@@ -42,12 +42,12 @@ class ConfigViewModel(app: Application) : AndroidViewModel(app) {
                 withContext(Dispatchers.IO) {
                     val bytes = getApplication<Application>().contentResolver
                         .openInputStream(uri)?.use { it.readBytes() } ?: ByteArray(0)
-                    val resultado = if (XlsxReader.ehXlsx(bytes)) {
-                        Importacao.clientesDeXlsx(XlsxReader.lerGrade(bytes), empresaId)
-                    } else {
-                        val linhas = bytes.toString(Charsets.UTF_8)
-                            .split(Regex("\\r?\\n")).filter { it.isNotBlank() }
-                        Importacao.clientesDeCsv(linhas, empresaId)
+                    val resultado = when {
+                        XlsxReader.ehXlsx(bytes) ->
+                            Importacao.clientesDeXlsx(XlsxReader.lerGrade(bytes), empresaId)
+                        Importacao.pareceTexto(bytes) ->
+                            Importacao.clientesDeCsv(Importacao.linhasDeBytes(bytes), empresaId)
+                        else -> error("Arquivo não reconhecido. Use um CSV ou uma planilha .xlsx.")
                     }
                     if (resultado.itens.isNotEmpty()) {
                         container.clienteRepository.inserirVarios(resultado.itens)

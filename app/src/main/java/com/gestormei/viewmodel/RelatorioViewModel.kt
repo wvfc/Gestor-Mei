@@ -81,7 +81,7 @@ class RelatorioViewModel(app: Application) : AndroidViewModel(app) {
         val ano = hoje.year
         val mes = hoje.monthValue
 
-        val recAno = receitas.filter { Datas.parse(it.data)?.year == ano }
+        val recAno = receitas.filter { Datas.parse(it.data)?.year == ano && it.contaNoLimite }
         val receitaAno = recAno.sumOf { it.valor }
         val receitaMes = recAno.filter { Datas.parse(it.data)?.monthValue == mes }.sumOf { it.valor }
 

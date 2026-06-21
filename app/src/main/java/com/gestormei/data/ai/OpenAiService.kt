@@ -41,6 +41,8 @@ object OpenAiService {
         "categoria (uma de: Material, Serviços, Impostos, Aluguel, Transporte, Marketing, Equipamentos, Outros). " +
         "Se algum campo não for encontrado, use null."
 
+    private const val MAX_PAGINAS = 3
+
     suspend fun extrairDeDespesaPdf(
         context: Context,
         uri: Uri,
@@ -48,48 +50,53 @@ object OpenAiService {
         modelo: String
     ): Result<ExtracaoDespesa> = withContext(Dispatchers.IO) {
         runCatching {
-            val base64 = renderizarPrimeiraPagina(context, uri)
-                ?: error("Não foi possível ler o PDF.")
-            val conteudo = chamarVisao(apiKey, modelo, base64)
+            val paginas = renderizarPaginas(context, uri)
+            if (paginas.isEmpty()) error("Não foi possível ler o PDF.")
+            val conteudo = chamarVisao(apiKey, modelo, paginas)
             parseResposta(conteudo)
         }
     }
 
-    private fun renderizarPrimeiraPagina(context: Context, uri: Uri): String? {
+    private fun renderizarPaginas(context: Context, uri: Uri): List<String> {
         val pfd: ParcelFileDescriptor =
-            context.contentResolver.openFileDescriptor(uri, "r") ?: return null
+            context.contentResolver.openFileDescriptor(uri, "r") ?: return emptyList()
+        val imagens = mutableListOf<String>()
         pfd.use { descriptor ->
             PdfRenderer(descriptor).use { renderer ->
-                if (renderer.pageCount == 0) return null
-                renderer.openPage(0).use { page ->
-                    val escala = 2
-                    val bitmap = Bitmap.createBitmap(
-                        page.width * escala,
-                        page.height * escala,
-                        Bitmap.Config.ARGB_8888
-                    )
-                    bitmap.eraseColor(Color.WHITE)
-                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    val saida = ByteArrayOutputStream()
-                    bitmap.compress(Bitmap.CompressFormat.JPEG, 80, saida)
-                    bitmap.recycle()
-                    return Base64.encodeToString(saida.toByteArray(), Base64.NO_WRAP)
+                val total = minOf(renderer.pageCount, MAX_PAGINAS)
+                for (i in 0 until total) {
+                    renderer.openPage(i).use { page ->
+                        val escala = 2
+                        val bitmap = Bitmap.createBitmap(
+                            page.width * escala,
+                            page.height * escala,
+                            Bitmap.Config.ARGB_8888
+                        )
+                        bitmap.eraseColor(Color.WHITE)
+                        page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        val saida = ByteArrayOutputStream()
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, saida)
+                        bitmap.recycle()
+                        imagens.add(Base64.encodeToString(saida.toByteArray(), Base64.NO_WRAP))
+                    }
                 }
             }
         }
+        return imagens
     }
 
-    private fun chamarVisao(apiKey: String, modelo: String, imagemBase64: String): String {
-        val imagem = JSONObject()
-            .put("type", "image_url")
-            .put(
-                "image_url",
-                JSONObject().put("url", "data:image/jpeg;base64,$imagemBase64")
+    private fun chamarVisao(apiKey: String, modelo: String, imagensBase64: List<String>): String {
+        val conteudo = JSONArray().put(JSONObject().put("type", "text").put("text", PROMPT))
+        imagensBase64.forEach { img ->
+            conteudo.put(
+                JSONObject()
+                    .put("type", "image_url")
+                    .put("image_url", JSONObject().put("url", "data:image/jpeg;base64,$img"))
             )
-        val texto = JSONObject().put("type", "text").put("text", PROMPT)
+        }
         val mensagemUsuario = JSONObject()
             .put("role", "user")
-            .put("content", JSONArray().put(texto).put(imagem))
+            .put("content", conteudo)
 
         val corpo = JSONObject()
             .put("model", modelo)

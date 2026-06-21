@@ -18,8 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -39,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -48,6 +52,7 @@ import com.gestormei.data.model.Empresa
 import com.gestormei.ui.components.ConfirmDeleteDialog
 import com.gestormei.ui.components.FormTextField
 import com.gestormei.ui.components.InfoRow
+import com.gestormei.util.Acoes
 import com.gestormei.util.Moeda
 import com.gestormei.viewmodel.EmpresaViewModel
 
@@ -114,6 +119,7 @@ private fun EmpresaCard(
     onEditar: () -> Unit,
     onExcluir: () -> Unit
 ) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -148,7 +154,26 @@ private fun EmpresaCard(
             InfoRow("Limite anual", Moeda.formatar(empresa.limiteAnual))
             if (empresa.observacoes.isNotBlank()) InfoRow("Obs.", empresa.observacoes)
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (empresa.chavePix.isNotBlank()) {
+                    IconButton(onClick = { Acoes.copiar(context, "PIX", empresa.chavePix) }) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = "Copiar PIX")
+                    }
+                }
+                if (empresa.telefone.isNotBlank()) {
+                    IconButton(onClick = { Acoes.ligar(context, empresa.telefone) }) {
+                        Icon(Icons.Default.Phone, contentDescription = "Ligar")
+                    }
+                }
+                if (empresa.email.isNotBlank()) {
+                    IconButton(onClick = { Acoes.email(context, empresa.email) }) {
+                        Icon(Icons.Default.Email, contentDescription = "E-mail")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!ativa) {
                     OutlinedButton(onClick = onSelecionar, modifier = Modifier.weight(1f)) {

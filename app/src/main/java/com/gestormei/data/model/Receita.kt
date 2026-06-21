@@ -1,5 +1,6 @@
 package com.gestormei.data.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
@@ -14,5 +15,6 @@ data class Receita(
     val formaPagamento: String = "",
     val numeroNota: String = "",
     val origem: String = "",
-    val referencia: String = ""
+    val referencia: String = "",
+    @ColumnInfo(defaultValue = "1") val contaNoLimite: Boolean = true
 )

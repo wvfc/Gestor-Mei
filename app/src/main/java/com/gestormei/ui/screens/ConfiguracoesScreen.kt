@@ -117,6 +117,14 @@ fun ConfiguracoesScreen(
                     onCheckedChange = { viewModel.alternarIaAnexos(it) }
                 )
             }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Privacidade: ao usar a leitura por IA, a imagem do documento é enviada " +
+                    "aos servidores da OpenAI para processamento. Desative a opção acima se " +
+                    "não quiser enviar seus documentos.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         // 2) Entrada de importação de clientes
