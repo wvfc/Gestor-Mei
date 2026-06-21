@@ -23,6 +23,9 @@ interface ReceitaDao {
     @Delete
     suspend fun excluir(receita: Receita)
 
+    @Query("SELECT referencia FROM receitas WHERE empresaId = :empresaId AND referencia <> ''")
+    suspend fun referencias(empresaId: Long): List<String>
+
     @Query("DELETE FROM receitas WHERE empresaId = :empresaId")
     suspend fun excluirPorEmpresa(empresaId: Long)
 }

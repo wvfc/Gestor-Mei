@@ -55,22 +55,28 @@ class ConfigViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun importarDespesasNubank(uri: Uri) {
+    fun importarExtratoNubank(uri: Uri) {
         viewModelScope.launch {
             runCatching {
                 val empresaId = container.empresaAtivaId.first()
                     ?: error("Selecione uma empresa antes de importar.")
                 withContext(Dispatchers.IO) {
                     val linhas = Importacao.lerLinhas(getApplication(), uri)
-                    val resultado = Importacao.despesasNubankDeCsv(linhas, empresaId)
-                    resultado.itens.forEach { container.financeiroRepository.salvarDespesa(it) }
-                    resultado
+                    val r = Importacao.extratoNubank(linhas, empresaId)
+                    val refsReceita = container.financeiroRepository.referenciasReceitas(empresaId).toSet()
+                    val refsDespesa = container.financeiroRepository.referenciasDespesas(empresaId).toSet()
+                    val novasReceitas = r.receitas.filter { it.referencia.isBlank() || it.referencia !in refsReceita }
+                    val novasDespesas = r.despesas.filter { it.referencia.isBlank() || it.referencia !in refsDespesa }
+                    novasReceitas.forEach { container.financeiroRepository.salvarReceita(it) }
+                    novasDespesas.forEach { container.financeiroRepository.salvarDespesa(it) }
+                    val duplicadas = (r.receitas.size - novasReceitas.size) + (r.despesas.size - novasDespesas.size)
+                    Triple(novasReceitas.size, novasDespesas.size, r.ignorados + duplicadas)
                 }
-            }.onSuccess { r ->
-                _mensagem.value = "Importadas ${r.itens.size} despesas do Nubank" +
-                    if (r.ignorados > 0) " (${r.ignorados} linhas ignoradas)." else "."
+            }.onSuccess { (rec, desp, ign) ->
+                _mensagem.value = "Importadas $rec receitas e $desp despesas do Nubank" +
+                    if (ign > 0) " ($ign ignoradas/duplicadas)." else "."
             }.onFailure {
-                _mensagem.value = "Falha ao importar despesas: ${it.message}"
+                _mensagem.value = "Falha ao importar extrato: ${it.message}"
             }
         }
     }

@@ -14,5 +14,6 @@ data class Empresa(
     val email: String = "",
     val chavePix: String = "",
     val observacoes: String = "",
-    val limiteAnual: Double = 81000.0
+    val limiteAnual: Double = 81000.0,
+    val metaMensal: Double = 0.0
 )

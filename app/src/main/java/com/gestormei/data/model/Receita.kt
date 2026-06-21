@@ -12,5 +12,7 @@ data class Receita(
     val descricao: String = "",
     val valor: Double = 0.0,
     val formaPagamento: String = "",
-    val numeroNota: String = ""
+    val numeroNota: String = "",
+    val origem: String = "",
+    val referencia: String = ""
 )

@@ -14,5 +14,6 @@ data class Despesa(
     val valor: Double = 0.0,
     val numeroNota: String = "",
     val anexoUri: String = "",
-    val origem: String = ""
+    val origem: String = "",
+    val referencia: String = ""
 )

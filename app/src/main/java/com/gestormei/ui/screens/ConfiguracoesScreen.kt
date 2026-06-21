@@ -61,7 +61,7 @@ fun ConfiguracoesScreen(
 
     val importarNubank = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
-    ) { uri -> uri?.let { viewModel.importarDespesasNubank(it) } }
+    ) { uri -> uri?.let { viewModel.importarExtratoNubank(it) } }
 
     Column(
         modifier = Modifier
@@ -142,12 +142,13 @@ fun ConfiguracoesScreen(
             }
         }
 
-        // 3) Entrada de importação de despesas do Nubank
+        // 3) Entrada de importação do extrato do Nubank
         AppCard {
-            SectionTitle("Importar despesas do Nubank")
+            SectionTitle("Importar extrato do Nubank")
             Text(
-                "Arquivo CSV da fatura/extrato do Nubank (data, descrição e valor). " +
-                    "As despesas são vinculadas à empresa selecionada.",
+                "Arquivo CSV do extrato do Nubank (Data, Valor, Identificador, Descrição). " +
+                    "Valores positivos viram receitas e negativos viram despesas, vinculadas à " +
+                    "empresa selecionada. Lançamentos repetidos são ignorados.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -157,7 +158,7 @@ fun ConfiguracoesScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.Download, contentDescription = null)
-                Text("  Selecionar CSV do Nubank")
+                Text("  Selecionar extrato (CSV)")
             }
         }
 

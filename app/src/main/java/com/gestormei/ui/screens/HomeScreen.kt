@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -86,6 +87,8 @@ fun HomeScreen(
             StatCard("Faturamento do ano", Moeda.formatar(state.faturamentoAno), Modifier.weight(1f))
         }
 
+        if (state.metaMensal > 0) MetaCard(state)
+
         LimiteCard(state)
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -105,6 +108,12 @@ fun HomeScreen(
             StatCard("Média mensal", Moeda.formatar(state.mediaMensal), Modifier.weight(1f))
             StatCard("Projeção dez.", Moeda.formatar(state.projecaoDezembro), Modifier.weight(1f))
         }
+
+        StatCard(
+            titulo = "DAS / Impostos pagos (ano)",
+            valor = Moeda.formatar(state.impostosAno),
+            modifier = Modifier.fillMaxWidth()
+        )
 
         StatCard(
             titulo = "Projetos em andamento",
@@ -172,6 +181,27 @@ private fun LimiteCard(state: HomeUiState) {
         InfoRow("Faturado no ano", Moeda.formatar(state.faturamentoAno))
         InfoRow("Valor restante", Moeda.formatar(state.valorRestante))
         InfoRow("Percentual usado", "${(state.percentualUsado * 100).toInt()}%")
+    }
+}
+
+@Composable
+private fun MetaCard(state: HomeUiState) {
+    val progresso = if (state.metaMensal > 0) {
+        (state.faturamentoMes / state.metaMensal).coerceIn(0.0, 1.0).toFloat()
+    } else 0f
+    val atingiu = state.faturamentoMes >= state.metaMensal
+    AppCard {
+        SectionTitle("Meta do mês")
+        InfoRow("Meta", Moeda.formatar(state.metaMensal))
+        InfoRow("Faturado no mês", Moeda.formatar(state.faturamentoMes))
+        InfoRow("Atingido", "${(progresso * 100).toInt()}%")
+        Spacer(Modifier.height(8.dp))
+        LinearProgressIndicator(
+            progress = { progresso },
+            modifier = Modifier.fillMaxWidth().height(10.dp),
+            color = if (atingiu) Verde else MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     }
 }
 

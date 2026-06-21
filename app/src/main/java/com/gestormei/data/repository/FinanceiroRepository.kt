@@ -17,6 +17,12 @@ class FinanceiroRepository(
     fun observarDespesas(empresaId: Long): Flow<List<Despesa>> =
         despesaDao.observarPorEmpresa(empresaId)
 
+    suspend fun referenciasReceitas(empresaId: Long): List<String> =
+        receitaDao.referencias(empresaId)
+
+    suspend fun referenciasDespesas(empresaId: Long): List<String> =
+        despesaDao.referencias(empresaId)
+
     suspend fun salvarReceita(receita: Receita) {
         if (receita.id == 0L) receitaDao.inserir(receita) else receitaDao.atualizar(receita)
     }

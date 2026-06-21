@@ -2,6 +2,7 @@ package com.gestormei.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +36,7 @@ import com.gestormei.ui.components.EmptyState
 import com.gestormei.ui.components.FormDialog
 import com.gestormei.ui.components.FormTextField
 import com.gestormei.ui.components.InfoRow
+import com.gestormei.ui.components.SearchField
 import com.gestormei.viewmodel.ClienteViewModel
 
 @Composable
@@ -43,19 +45,26 @@ fun ClientesScreen(viewModel: ClienteViewModel = viewModel()) {
     var editando by remember { mutableStateOf<Cliente?>(null) }
     var mostrarForm by remember { mutableStateOf(false) }
     var excluindo by remember { mutableStateOf<Cliente?>(null) }
+    var busca by remember { mutableStateOf("") }
+
+    val filtrados = remember(clientes, busca) {
+        clientes.filter {
+            busca.isBlank() || it.nome.contains(busca, true) ||
+                it.email.contains(busca, true) || it.telefone.contains(busca, true)
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        if (clientes.isEmpty()) {
-            EmptyState(
-                "Nenhum cliente cadastrado.\nUse Configurações para importar de um CSV.",
-                Modifier.align(Alignment.Center)
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(clientes, key = { it.id }) { c ->
+        Column(modifier = Modifier.fillMaxSize()) {
+            SearchField(busca, { busca = it }, Modifier.padding(16.dp), "Buscar cliente")
+            if (filtrados.isEmpty()) {
+                EmptyState("Nenhum cliente encontrado.\nUse Configurações para importar de um CSV.")
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(filtrados, key = { it.id }) { c ->
                     AppCard {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -74,6 +83,7 @@ fun ClientesScreen(viewModel: ClienteViewModel = viewModel()) {
                         if (c.email.isNotBlank()) InfoRow("E-mail", c.email)
                         if (c.telefone.isNotBlank()) InfoRow("Telefone", c.telefone)
                         if (c.observacoes.isNotBlank()) InfoRow("Obs.", c.observacoes)
+                        }
                     }
                 }
             }

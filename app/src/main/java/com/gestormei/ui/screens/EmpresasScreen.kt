@@ -181,6 +181,7 @@ private fun EmpresaFormDialog(
     var pix by remember { mutableStateOf(inicial?.chavePix ?: "") }
     var observacoes by remember { mutableStateOf(inicial?.observacoes ?: "") }
     var limite by remember { mutableStateOf(((inicial?.limiteAnual ?: 81000.0)).toString()) }
+    var meta by remember { mutableStateOf((inicial?.metaMensal ?: 0.0).takeIf { it > 0 }?.toString() ?: "") }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
@@ -205,6 +206,7 @@ private fun EmpresaFormDialog(
                 FormTextField("Email principal", email, { email = it })
                 FormTextField("Chave PIX", pix, { pix = it })
                 FormTextField("Limite anual (R$)", limite, { limite = it })
+                FormTextField("Meta de faturamento mensal (R$)", meta, { meta = it })
                 FormTextField("Observações", observacoes, { observacoes = it }, singleLine = false, minLines = 2)
 
                 Row(
@@ -225,7 +227,8 @@ private fun EmpresaFormDialog(
                                     email = email.trim(),
                                     chavePix = pix.trim(),
                                     observacoes = observacoes.trim(),
-                                    limiteAnual = Moeda.parse(limite).takeIf { it > 0 } ?: 81000.0
+                                    limiteAnual = Moeda.parse(limite).takeIf { it > 0 } ?: 81000.0,
+                                    metaMensal = Moeda.parse(meta)
                                 )
                             )
                         }

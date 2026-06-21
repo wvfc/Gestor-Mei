@@ -36,6 +36,7 @@ import com.gestormei.ui.components.SectionTitle
 import com.gestormei.ui.components.paletaGraficos
 import com.gestormei.util.Datas
 import com.gestormei.util.Moeda
+import com.gestormei.viewmodel.ComparativoViewModel
 import com.gestormei.viewmodel.RelatorioViewModel
 import java.time.LocalDate
 
@@ -56,8 +57,54 @@ fun RelatoriosScreen(
         TabRow(selectedTabIndex = aba) {
             Tab(selected = aba == 0, onClick = { aba = 0 }, text = { Text("Resumo") })
             Tab(selected = aba == 1, onClick = { aba = 1 }, text = { Text("Gráficos") })
+            Tab(selected = aba == 2, onClick = { aba = 2 }, text = { Text("Empresas") })
         }
-        if (aba == 0) ResumoTab(state.empresaNome, viewModel, onVoltar) else GraficosTab(viewModel)
+        when (aba) {
+            0 -> ResumoTab(state.empresaNome, viewModel, onVoltar)
+            1 -> GraficosTab(viewModel)
+            else -> ComparativoTab()
+        }
+    }
+}
+
+@Composable
+private fun ComparativoTab(viewModel: ComparativoViewModel = viewModel()) {
+    val empresas by viewModel.empresas.collectAsStateWithLifecycle()
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            text = "Comparativo entre empresas (ano atual)",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold
+        )
+        if (empresas.size < 2) {
+            Text(
+                "Cadastre duas empresas para comparar.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        empresas.forEach { e ->
+            AppCard {
+                Text(
+                    text = e.nome,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                InfoRow("Faturamento", Moeda.formatar(e.faturamentoAno))
+                InfoRow("Despesas", Moeda.formatar(e.despesaAno))
+                InfoRow("Saldo", Moeda.formatar(e.saldoAno))
+                InfoRow("DAS / Impostos", Moeda.formatar(e.impostosAno))
+                InfoRow("Limite usado", "${(e.percentualLimite * 100).toInt()}% de ${Moeda.formatar(e.limiteAnual)}")
+            }
+        }
+        Spacer(Modifier.height(8.dp))
     }
 }
 

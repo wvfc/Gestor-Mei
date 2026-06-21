@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -37,6 +39,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -54,7 +57,9 @@ import com.gestormei.ui.components.EmptyState
 import com.gestormei.ui.components.FormDialog
 import com.gestormei.ui.components.FormTextField
 import com.gestormei.ui.components.InfoRow
+import com.gestormei.ui.components.SearchField
 import com.gestormei.util.Datas
+import com.gestormei.util.Exportacao
 import com.gestormei.util.Moeda
 import com.gestormei.util.Opcoes
 import com.gestormei.viewmodel.FinanceiroViewModel
@@ -110,6 +115,26 @@ private fun anos(datas: List<String>): List<String> {
     return listOf("Todos") + conjunto.sortedDescending().map { it.toString() }
 }
 
+@Composable
+private fun TotalComExport(total: String, cor: Color, onExport: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Total: $total",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = cor
+        )
+        TextButton(onClick = onExport) {
+            Icon(Icons.Default.Share, contentDescription = null)
+            Text("  CSV")
+        }
+    }
+}
+
 private fun combinaPeriodo(data: String, mes: Int, ano: String): Boolean {
     val d = Datas.parse(data) ?: return mes == 0 && ano == "Todos"
     val okMes = mes == 0 || d.monthValue == mes
@@ -125,9 +150,15 @@ private fun ReceitasTab(viewModel: FinanceiroViewModel) {
     var editando by remember { mutableStateOf<Receita?>(null) }
     var mostrarForm by remember { mutableStateOf(false) }
     var excluindo by remember { mutableStateOf<Receita?>(null) }
+    var busca by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
-    val filtradas = remember(receitas, mes, ano) {
+    val filtradas = remember(receitas, mes, ano, busca) {
         receitas.filter { combinaPeriodo(it.data, mes, ano) }
+            .filter {
+                busca.isBlank() || it.cliente.contains(busca, true) ||
+                    it.descricao.contains(busca, true) || it.formaPagamento.contains(busca, true)
+            }
     }
     val total = filtradas.sumOf { it.valor }
 
@@ -135,12 +166,11 @@ private fun ReceitasTab(viewModel: FinanceiroViewModel) {
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(12.dp))
             FiltroPeriodo(mes, ano, anos(receitas.map { it.data }), { mes = it }, { ano = it })
-            Text(
-                text = "Total: ${Moeda.formatar(total)}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(16.dp)
+            SearchField(busca, { busca = it }, Modifier.padding(horizontal = 16.dp, vertical = 8.dp), "Buscar receita")
+            TotalComExport(
+                total = Moeda.formatar(total),
+                cor = MaterialTheme.colorScheme.primary,
+                onExport = { Exportacao.compartilharReceitas(context, filtradas) }
             )
             if (filtradas.isEmpty()) {
                 EmptyState("Nenhuma receita no período.")
@@ -256,9 +286,15 @@ private fun DespesasTab(viewModel: FinanceiroViewModel) {
     var editando by remember { mutableStateOf<Despesa?>(null) }
     var mostrarForm by remember { mutableStateOf(false) }
     var excluindo by remember { mutableStateOf<Despesa?>(null) }
+    var busca by remember { mutableStateOf("") }
+    val context = LocalContext.current
 
-    val filtradas = remember(despesas, mes, ano) {
+    val filtradas = remember(despesas, mes, ano, busca) {
         despesas.filter { combinaPeriodo(it.data, mes, ano) }
+            .filter {
+                busca.isBlank() || it.fornecedor.contains(busca, true) ||
+                    it.descricao.contains(busca, true) || it.categoria.contains(busca, true)
+            }
     }
     val total = filtradas.sumOf { it.valor }
 
@@ -266,12 +302,11 @@ private fun DespesasTab(viewModel: FinanceiroViewModel) {
         Column(modifier = Modifier.fillMaxSize()) {
             Spacer(Modifier.height(12.dp))
             FiltroPeriodo(mes, ano, anos(despesas.map { it.data }), { mes = it }, { ano = it })
-            Text(
-                text = "Total: ${Moeda.formatar(total)}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(16.dp)
+            SearchField(busca, { busca = it }, Modifier.padding(horizontal = 16.dp, vertical = 8.dp), "Buscar despesa")
+            TotalComExport(
+                total = Moeda.formatar(total),
+                cor = MaterialTheme.colorScheme.error,
+                onExport = { Exportacao.compartilharDespesas(context, filtradas) }
             )
             if (filtradas.isEmpty()) {
                 EmptyState("Nenhuma despesa no período.")

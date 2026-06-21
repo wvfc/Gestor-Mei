@@ -36,7 +36,9 @@ data class HomeUiState(
     val projetosEmAndamento: Int = 0,
     val nivelAlerta: NivelAlerta = NivelAlerta.NENHUM,
     val serieReceitas: List<Double> = List(12) { 0.0 },
-    val serieDespesas: List<Double> = List(12) { 0.0 }
+    val serieDespesas: List<Double> = List(12) { 0.0 },
+    val metaMensal: Double = 0.0,
+    val impostosAno: Double = 0.0
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -88,6 +90,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         val comprasMes = despAno
             .filter { Datas.parse(it.data)?.monthValue == mes }
             .sumOf { it.valor }
+        val impostosAno = despAno.filter { it.categoria == "Impostos" }.sumOf { it.valor }
 
         val limite = empresa.limiteAnual.takeIf { it > 0 } ?: 81000.0
         val percentual = faturamentoAno / limite
@@ -130,7 +133,9 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             projetosEmAndamento = emAndamento,
             nivelAlerta = nivel,
             serieReceitas = serieRec.toList(),
-            serieDespesas = serieDesp.toList()
+            serieDespesas = serieDesp.toList(),
+            metaMensal = empresa.metaMensal,
+            impostosAno = impostosAno
         )
     }
 }

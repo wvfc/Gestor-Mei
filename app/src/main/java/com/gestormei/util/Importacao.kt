@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.gestormei.data.model.Cliente
 import com.gestormei.data.model.Despesa
+import com.gestormei.data.model.Receita
 import kotlin.math.abs
 
 /**
@@ -58,49 +59,109 @@ object Importacao {
         return Resultado(clientes, ignorados)
     }
 
-    fun despesasNubankDeCsv(linhas: List<String>, empresaId: Long): Resultado<Despesa> {
-        if (linhas.isEmpty()) return Resultado(emptyList(), 0)
+    data class ResultadoNubank(
+        val receitas: List<Receita>,
+        val despesas: List<Despesa>,
+        val ignorados: Int
+    )
+
+    /**
+     * Importa o extrato de conta do Nubank (colunas: Data, Valor, Identificador,
+     * Descrição). Valores positivos viram receitas; negativos viram despesas.
+     * O Identificador é guardado como referência para evitar duplicatas.
+     */
+    fun extratoNubank(linhas: List<String>, empresaId: Long): ResultadoNubank {
+        if (linhas.isEmpty()) return ResultadoNubank(emptyList(), emptyList(), 0)
         val delim = delimitador(linhas.first())
         val cabecalho = campos(linhas.first(), delim).map { it.lowercase() }
-        val temCabecalho = cabecalho.any { it.contains("date") || it.contains("data") } &&
-            cabecalho.any { it.contains("amount") || it.contains("valor") }
+        val temCabecalho = cabecalho.any { it.contains("data") || it.contains("date") } &&
+            cabecalho.any { it.contains("valor") || it.contains("amount") }
 
         val idxData: Int
         val idxValor: Int
+        val idxId: Int
         val idxDesc: Int
         if (temCabecalho) {
-            idxData = cabecalho.indexOfFirst { it.contains("date") || it.contains("data") }
-            idxValor = cabecalho.indexOfFirst { it.contains("amount") || it.contains("valor") }
+            idxData = cabecalho.indexOfFirst { it.contains("data") || it.contains("date") }
+            idxValor = cabecalho.indexOfFirst { it.contains("valor") || it.contains("amount") }
+            idxId = cabecalho.indexOfFirst { it.contains("identificador") || it == "id" }
             idxDesc = cabecalho.indexOfFirst {
-                it.contains("title") || it.contains("descri") || it.contains("identificador") || it.contains("estabelecimento")
-            }.let { if (it >= 0) it else 1 }
+                it.contains("descri") || it.contains("title") || it.contains("histórico") ||
+                    it.contains("historico") || it.contains("estabelecimento")
+            }.let { if (it >= 0) it else cabecalho.lastIndex }
         } else {
-            idxData = 0; idxDesc = 1; idxValor = 2
+            idxData = 0; idxValor = 1; idxId = 2; idxDesc = 3
         }
 
         val dados = if (temCabecalho) linhas.drop(1) else linhas
+        val receitas = mutableListOf<Receita>()
         val despesas = mutableListOf<Despesa>()
         var ignorados = 0
         for (linha in dados) {
             val c = campos(linha, delim)
             val dataIso = c.getOrNull(idxData)?.let { Datas.normalizarParaIso(it) }
             val valorBruto = c.getOrNull(idxValor)?.let { Moeda.parse(it) } ?: 0.0
-            val valor = abs(valorBruto)
-            val descricao = c.getOrNull(idxDesc)?.trim().orEmpty()
-            if (dataIso == null || valor <= 0.0) { ignorados++; continue }
-            despesas.add(
-                Despesa(
-                    empresaId = empresaId,
-                    data = dataIso,
-                    fornecedor = descricao.take(60),
-                    descricao = descricao,
-                    categoria = "Outros",
-                    valor = valor,
-                    origem = "Nubank"
+            // a descrição é a última coluna e pode conter o delimitador
+            val descricao = if (idxDesc <= c.lastIndex) {
+                c.subList(idxDesc, c.size).joinToString(delim.toString()).trim()
+            } else ""
+            val referencia = c.getOrNull(idxId)?.trim().orEmpty()
+            if (dataIso == null || valorBruto == 0.0) { ignorados++; continue }
+
+            val nome = contraparte(descricao)
+            if (valorBruto > 0) {
+                receitas.add(
+                    Receita(
+                        empresaId = empresaId,
+                        data = dataIso,
+                        cliente = nome,
+                        descricao = descricao,
+                        valor = valorBruto,
+                        formaPagamento = formaReceita(descricao),
+                        origem = "Nubank",
+                        referencia = referencia
+                    )
                 )
-            )
+            } else {
+                despesas.add(
+                    Despesa(
+                        empresaId = empresaId,
+                        data = dataIso,
+                        fornecedor = nome,
+                        descricao = descricao,
+                        categoria = categoriaDespesa(descricao),
+                        valor = abs(valorBruto),
+                        origem = "Nubank",
+                        referencia = referencia
+                    )
+                )
+            }
         }
-        return Resultado(despesas, ignorados)
+        return ResultadoNubank(receitas, despesas, ignorados)
+    }
+
+    /** Extrai o nome da contraparte da descrição do Nubank (2º trecho após " - "). */
+    private fun contraparte(descricao: String): String {
+        val partes = descricao.split(" - ")
+        val nome = partes.getOrNull(1)?.trim()?.takeIf { it.isNotBlank() } ?: partes.first().trim()
+        return nome.take(60)
+    }
+
+    private fun formaReceita(descricao: String): String = when {
+        descricao.contains("Pix", ignoreCase = true) -> "Pix"
+        descricao.contains("boleto", ignoreCase = true) -> "Boleto"
+        else -> "Transferência"
+    }
+
+    private fun categoriaDespesa(descricao: String): String {
+        val d = descricao.uppercase()
+        return when {
+            d.contains("DAS") || d.contains("SIMPLES NACIONAL") || d.contains("IMPOSTO") -> "Impostos"
+            d.contains("TARIFA") -> "Serviços"
+            d.contains("COMPRA NO DÉBITO") || d.contains("COMPRA NO DEBITO") -> "Material"
+            d.contains("ALUGUEL") -> "Aluguel"
+            else -> "Outros"
+        }
     }
 
     private fun delimitador(linha: String): Char =
