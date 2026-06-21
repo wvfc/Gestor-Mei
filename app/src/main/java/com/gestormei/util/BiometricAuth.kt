@@ -9,16 +9,17 @@ import androidx.fragment.app.FragmentActivity
 /** Bloqueio do cofre de senhas por biometria/credencial do aparelho. */
 object BiometricAuth {
 
-    fun disponivel(context: Context): Boolean =
+    fun disponivel(context: Context): Boolean = runCatching {
         BiometricManager.from(context)
             .canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK) ==
             BiometricManager.BIOMETRIC_SUCCESS
+    }.getOrDefault(false)
 
     fun autenticar(
         activity: FragmentActivity,
         onSucesso: () -> Unit,
         onErro: (String) -> Unit
-    ) {
+    ) = runCatching {
         val prompt = BiometricPrompt(
             activity,
             ContextCompat.getMainExecutor(activity),
@@ -39,5 +40,5 @@ object BiometricAuth {
             .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK)
             .build()
         prompt.authenticate(info)
-    }
+    }.onFailure { onErro(it.message ?: "Falha na autenticação") }
 }

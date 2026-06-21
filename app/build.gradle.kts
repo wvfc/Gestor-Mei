@@ -12,9 +12,20 @@ android {
         applicationId = "com.gestormei"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
         vectorDrawables { useSupportLibrary = true }
+    }
+
+    signingConfigs {
+        // Chave de debug fixa, versionada, para que todos os APKs (CI e local)
+        // tenham a mesma assinatura e possam ser atualizados sem conflito.
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
