@@ -12,12 +12,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +47,7 @@ fun ClientesScreen(viewModel: ClienteViewModel = viewModel()) {
     var editando by remember { mutableStateOf<Cliente?>(null) }
     var mostrarForm by remember { mutableStateOf(false) }
     var excluindo by remember { mutableStateOf<Cliente?>(null) }
+    var confirmarLimpar by remember { mutableStateOf(false) }
     var busca by remember { mutableStateOf("") }
 
     val filtrados = remember(clientes, busca) {
@@ -57,6 +60,23 @@ fun ClientesScreen(viewModel: ClienteViewModel = viewModel()) {
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             SearchField(busca, { busca = it }, Modifier.padding(16.dp), "Buscar cliente")
+            if (clientes.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${clientes.size} cliente(s)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(onClick = { confirmarLimpar = true }) {
+                        Icon(Icons.Default.DeleteSweep, contentDescription = null)
+                        Text("  Excluir todos")
+                    }
+                }
+            }
             if (filtrados.isEmpty()) {
                 EmptyState("Nenhum cliente encontrado.\nUse Configurações para importar de um CSV.")
             } else {
@@ -106,6 +126,13 @@ fun ClientesScreen(viewModel: ClienteViewModel = viewModel()) {
             titulo = alvo.nome,
             onConfirmar = { viewModel.excluir(alvo); excluindo = null },
             onCancelar = { excluindo = null }
+        )
+    }
+    if (confirmarLimpar) {
+        ConfirmDeleteDialog(
+            titulo = "todos os clientes desta empresa",
+            onConfirmar = { viewModel.excluirTodos(); confirmarLimpar = false },
+            onCancelar = { confirmarLimpar = false }
         )
     }
 }

@@ -16,4 +16,6 @@ class ClienteRepository(private val dao: ClienteDao) {
     suspend fun inserirVarios(clientes: List<Cliente>) = dao.inserirVarios(clientes)
 
     suspend fun excluir(cliente: Cliente) = dao.excluir(cliente)
+
+    suspend fun excluirTodos(empresaId: Long) = dao.excluirPorEmpresa(empresaId)
 }

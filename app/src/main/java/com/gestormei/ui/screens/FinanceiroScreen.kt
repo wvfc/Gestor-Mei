@@ -245,16 +245,57 @@ private fun ReceitaForm(
     onSalvar: (Receita) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val config = remember {
+        (context.applicationContext as GestorMeiApplication).container.configManager
+    }
+
     var data by remember { mutableStateOf(inicial?.data ?: Datas.hoje()) }
     var cliente by remember { mutableStateOf(inicial?.cliente ?: "") }
     var descricao by remember { mutableStateOf(inicial?.descricao ?: "") }
     var valor by remember { mutableStateOf(inicial?.valor?.takeIf { it > 0 }?.toString() ?: "") }
     var forma by remember { mutableStateOf(inicial?.formaPagamento ?: Opcoes.formasPagamento.first()) }
     var nota by remember { mutableStateOf(inicial?.numeroNota ?: "") }
+    var analisando by remember { mutableStateOf(false) }
+    var mensagemIa by remember { mutableStateOf<String?>(null) }
+
+    val seletorPdf = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri, Intent.FLAG_GRANT_READ_URI_PERMISSION
+                )
+            }
+            if (config.iaAnexosAtiva && config.temChave) {
+                analisando = true
+                mensagemIa = "Lendo a NF com a IA..."
+                scope.launch {
+                    val resultado = OpenAiService.extrairDeDespesaPdf(
+                        context, uri, config.openAiKey, config.openAiModel
+                    )
+                    analisando = false
+                    resultado.onSuccess { extra ->
+                        extra.valor?.let { if (it > 0) valor = it.toString() }
+                        extra.fornecedor?.let { if (it.isNotBlank()) cliente = it }
+                        extra.data?.let { d -> Datas.normalizarParaIso(d)?.let { data = it } }
+                        extra.descricao?.let { if (it.isNotBlank() && descricao.isBlank()) descricao = it }
+                        mensagemIa = "Dados preenchidos pela IA. Confira antes de salvar."
+                    }.onFailure {
+                        mensagemIa = "Não foi possível ler com IA: ${it.message}"
+                    }
+                }
+            } else {
+                mensagemIa = "Configure a chave da OpenAI em Configurações para ler a NF."
+            }
+        }
+    }
 
     FormDialog(
         titulo = if (inicial == null) "Nova receita" else "Editar receita",
-        salvarHabilitado = valor.isNotBlank(),
+        salvarHabilitado = valor.isNotBlank() && !analisando,
         onSalvar = {
             onSalvar(
                 (inicial ?: Receita(empresaId = 0)).copy(
@@ -269,6 +310,25 @@ private fun ReceitaForm(
         },
         onDismiss = onDismiss
     ) {
+        OutlinedButton(
+            onClick = { seletorPdf.launch(arrayOf("application/pdf")) },
+            enabled = !analisando,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            if (analisando) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text("  Lendo com IA...")
+            } else {
+                Text("Ler NF (PDF) com IA")
+            }
+        }
+        mensagemIa?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
         DatePickerField("Data", data, { data = it })
         FormTextField("Cliente", cliente, { cliente = it })
         FormTextField("Descrição do serviço/produto", descricao, { descricao = it }, singleLine = false, minLines = 2)

@@ -34,4 +34,9 @@ class ClienteViewModel(app: Application) : AndroidViewModel(app) {
     fun excluir(cliente: Cliente) {
         viewModelScope.launch { container.clienteRepository.excluir(cliente) }
     }
+
+    fun excluirTodos() {
+        val id = empresaId.value ?: return
+        viewModelScope.launch { container.clienteRepository.excluirTodos(id) }
+    }
 }

@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AttachMoney
@@ -19,6 +20,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -37,6 +39,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -93,10 +96,22 @@ private fun GestorMeiApp() {
 
     val empresaAtiva = empresas.firstOrNull { it.id == selecionadaId } ?: empresas.firstOrNull()
     var menuAberto by remember { mutableStateOf(false) }
+    val ehDetalhe = rotaAtual in setOf(ROTA_RELATORIOS, ROTA_CONFIGURACOES, ROTA_CLIENTES)
 
     Scaffold(
         topBar = {
             TopAppBar(
+                navigationIcon = {
+                    if (ehDetalhe) {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Voltar",
+                                tint = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
+                },
                 title = {
                     if (empresas.size > 1) {
                         TextButton(onClick = { menuAberto = true }) {
@@ -149,15 +164,17 @@ private fun GestorMeiApp() {
         bottomBar = {
             NavigationBar {
                 Destino.entries.forEach { destino ->
+                    val selecionado = backStack?.destination?.hierarchy?.any { it.route == destino.rota } == true
                     NavigationBarItem(
-                        selected = rotaAtual == destino.rota,
+                        selected = selecionado,
                         onClick = {
-                            navController.navigate(destino.rota) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                            if (!selecionado) {
+                                navController.navigate(destino.rota) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        inclusive = false
+                                    }
+                                    launchSingleTop = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
                         },
                         icon = { Icon(destino.icone, contentDescription = destino.titulo) },

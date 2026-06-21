@@ -25,4 +25,7 @@ interface ClienteDao {
 
     @Delete
     suspend fun excluir(cliente: Cliente)
+
+    @Query("DELETE FROM clientes WHERE empresaId = :empresaId")
+    suspend fun excluirPorEmpresa(empresaId: Long)
 }

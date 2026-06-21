@@ -59,6 +59,52 @@ object Importacao {
         return Resultado(clientes, ignorados)
     }
 
+    /** Importa a lista de clientes de uma planilha .xlsx (Excel). */
+    fun clientesDeXlsx(grade: List<Map<String, String>>, empresaId: Long): Resultado<Cliente> {
+        if (grade.isEmpty()) return Resultado(emptyList(), 0)
+        val cabecalho = grade.first()
+        fun coluna(vararg termos: String): String? =
+            cabecalho.entries.firstOrNull { (_, v) ->
+                termos.any { v.trim().lowercase().contains(it) }
+            }?.key
+
+        val colNome = coluna("razão social", "razao social") ?: coluna("nome/razão", "nome/razao") ?: coluna("nome")
+        val colEmail = coluna("mail")
+        val colTel = coluna("telefone")
+        val colCel = coluna("celular")
+        val colCnpj = coluna("cnpj")
+        val colCidade = coluna("cidade")
+        val colEstado = coluna("estado")
+
+        val clientes = mutableListOf<Cliente>()
+        var ignorados = 0
+        for (linha in grade.drop(1)) {
+            val nome = colNome?.let { linha[it]?.trim() }.orEmpty()
+            if (nome.isBlank()) { ignorados++; continue }
+            val telefone = colTel?.let { linha[it]?.trim() }?.takeIf { it.isNotBlank() }
+                ?: colCel?.let { linha[it]?.trim() }.orEmpty()
+            val cnpj = colCnpj?.let { linha[it]?.trim() }?.takeIf { it.isNotBlank() }
+            val cidadeUf = listOfNotNull(
+                colCidade?.let { linha[it]?.trim() }?.takeIf { it.isNotBlank() },
+                colEstado?.let { linha[it]?.trim() }?.takeIf { it.isNotBlank() }
+            ).joinToString("/")
+            val obs = listOfNotNull(
+                cnpj?.let { "CNPJ: $it" },
+                cidadeUf.takeIf { it.isNotBlank() }
+            ).joinToString(" • ")
+            clientes.add(
+                Cliente(
+                    empresaId = empresaId,
+                    nome = nome,
+                    email = colEmail?.let { linha[it]?.trim() }.orEmpty(),
+                    telefone = telefone,
+                    observacoes = obs
+                )
+            )
+        }
+        return Resultado(clientes, ignorados)
+    }
+
     data class ResultadoNubank(
         val receitas: List<Receita>,
         val despesas: List<Despesa>,
@@ -66,9 +112,9 @@ object Importacao {
     )
 
     /**
-     * Importa o extrato de conta do Nubank (colunas: Data, Valor, Identificador,
-     * Descrição). Valores positivos viram receitas; negativos viram despesas.
-     * O Identificador é guardado como referência para evitar duplicatas.
+     * Importa o extrato de conta do Nubank (Data, Valor, Identificador, Descrição).
+     * Valores positivos viram receitas; negativos viram despesas. O Identificador
+     * é guardado como referência para evitar duplicatas.
      */
     fun extratoNubank(linhas: List<String>, empresaId: Long): ResultadoNubank {
         if (linhas.isEmpty()) return ResultadoNubank(emptyList(), emptyList(), 0)

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.gestormei.GestorMeiApplication
 import com.gestormei.data.ConfigManager
 import com.gestormei.util.Importacao
+import com.gestormei.util.XlsxReader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,8 +40,15 @@ class ConfigViewModel(app: Application) : AndroidViewModel(app) {
                 val empresaId = container.empresaAtivaId.first()
                     ?: error("Selecione uma empresa antes de importar.")
                 withContext(Dispatchers.IO) {
-                    val linhas = Importacao.lerLinhas(getApplication(), uri)
-                    val resultado = Importacao.clientesDeCsv(linhas, empresaId)
+                    val bytes = getApplication<Application>().contentResolver
+                        .openInputStream(uri)?.use { it.readBytes() } ?: ByteArray(0)
+                    val resultado = if (XlsxReader.ehXlsx(bytes)) {
+                        Importacao.clientesDeXlsx(XlsxReader.lerGrade(bytes), empresaId)
+                    } else {
+                        val linhas = bytes.toString(Charsets.UTF_8)
+                            .split(Regex("\\r?\\n")).filter { it.isNotBlank() }
+                        Importacao.clientesDeCsv(linhas, empresaId)
+                    }
                     if (resultado.itens.isNotEmpty()) {
                         container.clienteRepository.inserirVarios(resultado.itens)
                     }

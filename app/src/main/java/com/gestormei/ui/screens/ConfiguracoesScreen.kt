@@ -123,17 +123,26 @@ fun ConfiguracoesScreen(
         AppCard {
             SectionTitle("Importar lista de clientes")
             Text(
-                "Arquivo CSV com colunas: nome, email, telefone.",
+                "Aceita planilha do Excel (.xlsx) ou CSV. Reconhece as colunas " +
+                    "Nome/Razão Social, CNPJ, Telefone/Celular e Email.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(8.dp))
             Button(
-                onClick = { importarClientes.launch(arrayOf("text/*", "text/csv", "application/octet-stream", "*/*")) },
+                onClick = {
+                    importarClientes.launch(
+                        arrayOf(
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            "application/vnd.ms-excel",
+                            "text/csv", "text/*", "application/octet-stream", "*/*"
+                        )
+                    )
+                },
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(Icons.Default.Download, contentDescription = null)
-                Text("  Selecionar CSV de clientes")
+                Text("  Selecionar arquivo (XLSX/CSV)")
             }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = onAbrirClientes, modifier = Modifier.fillMaxWidth()) {
